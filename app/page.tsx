@@ -7,11 +7,28 @@ import { CategoryPage } from "@/components/category-page"
 import { KeywordsPage } from "@/components/keywords-page"
 import ComplaintListPage from "@/components/complaint-list-page"
 import ComplaintDetailPage from "@/components/complaint-detail-page"
-import { sampleComplaints, type Complaint } from "@/components/complaint-list-page"
+import { ComplaintItem, loadComplaintsData } from "@/lib/data-loader"
 
 export default function DashboardPage() {
   const [currentPage, setCurrentPage] = useState("home")
-  const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null)
+  const [selectedComplaint, setSelectedComplaint] = useState<ComplaintItem | null>(null)
+  const [complaints, setComplaints] = useState<ComplaintItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchComplaints = async () => {
+      try {
+        const data = await loadComplaintsData()
+        setComplaints(data)
+      } catch (error) {
+        console.error('Error fetching complaints:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchComplaints()
+  }, [])
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -37,7 +54,7 @@ export default function DashboardPage() {
     }
   }
 
-  const handleComplaintClick = (complaint: Complaint) => {
+  const handleComplaintClick = (complaint: ComplaintItem) => {
     console.log("[v0] Complaint clicked:", complaint.title)
     setSelectedComplaint(complaint)
     setCurrentPage("complaints")
@@ -51,17 +68,17 @@ export default function DashboardPage() {
 
   const handlePreviousComplaint = () => {
     if (!selectedComplaint) return
-    const currentIndex = sampleComplaints.findIndex((c) => c.id === selectedComplaint.id)
+    const currentIndex = complaints.findIndex((c) => c.id === selectedComplaint.id)
     if (currentIndex > 0) {
-      setSelectedComplaint(sampleComplaints[currentIndex - 1])
+      setSelectedComplaint(complaints[currentIndex - 1])
     }
   }
 
   const handleNextComplaint = () => {
     if (!selectedComplaint) return
-    const currentIndex = sampleComplaints.findIndex((c) => c.id === selectedComplaint.id)
-    if (currentIndex < sampleComplaints.length - 1) {
-      setSelectedComplaint(sampleComplaints[currentIndex + 1])
+    const currentIndex = complaints.findIndex((c) => c.id === selectedComplaint.id)
+    if (currentIndex < complaints.length - 1) {
+      setSelectedComplaint(complaints[currentIndex + 1])
     }
   }
 
@@ -75,7 +92,7 @@ export default function DashboardPage() {
         return <KeywordsPage />
       case "complaints":
         if (selectedComplaint) {
-          const currentIndex = sampleComplaints.findIndex((c) => c.id === selectedComplaint.id)
+          const currentIndex = complaints.findIndex((c) => c.id === selectedComplaint.id)
           return (
             <ComplaintDetailPage
               complaint={selectedComplaint}
@@ -83,7 +100,7 @@ export default function DashboardPage() {
               onPrevious={handlePreviousComplaint}
               onNext={handleNextComplaint}
               hasPrevious={currentIndex > 0}
-              hasNext={currentIndex < sampleComplaints.length - 1}
+              hasNext={currentIndex < complaints.length - 1}
             />
           )
         }
@@ -91,6 +108,17 @@ export default function DashboardPage() {
       default:
         return <DashboardHome onComplaintClick={handleComplaintClick} />
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="h-screen bg-white flex font-sans">
+        <Sidebar currentPage={currentPage} onPageChange={handlePageChange} />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-lg">데이터를 불러오는 중...</div>
+        </div>
+      </div>
+    )
   }
 
   return (

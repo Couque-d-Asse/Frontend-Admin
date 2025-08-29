@@ -2,10 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ComplaintChart } from "@/components/complaint-chart"
 import { WordCloudComponent } from "@/components/word-cloud"
 import { RealtimeComplaints } from "@/components/realtime-complaints"
-import type { Complaint } from "@/components/complaint-list-page"
+import type { ComplaintItem } from "@/lib/data-loader"
 
 interface DashboardHomeProps {
-  onComplaintClick: (complaint: Complaint) => void
+  onComplaintClick: (complaint: ComplaintItem) => void
 }
 
 export function DashboardHome({ onComplaintClick }: DashboardHomeProps) {

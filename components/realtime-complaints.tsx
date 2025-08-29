@@ -1,42 +1,83 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { sampleComplaints, type Complaint } from "@/components/complaint-list-page"
+import { ComplaintItem, loadComplaintsData } from "@/lib/data-loader"
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "처리 전":
-      return "bg-rose-500 text-white"; // 부드러운 빨강
-    case "처리 중":
-      return "bg-amber-500 text-white"; // 부드러운 주황
-    case "처리 완료":
-      return "bg-emerald-500 text-white"; // 부드러운 초록
+type ComplaintType = 
+  | "도로 시설" 
+  | "주정차" 
+  | "보행자 안전" 
+  | "교통 운영" 
+  | "안전 및 위험 요소" 
+  | "환경·소음"
+
+const getTypeColor = (type: ComplaintType) => {
+  switch (type) {
+    case "도로 시설":
+      return "bg-blue-500"
+    case "주정차":
+      return "bg-orange-500"
+    case "보행자 안전":
+      return "bg-green-500"
+    case "교통 운영":
+      return "bg-purple-500"
+    case "안전 및 위험 요소":
+      return "bg-red-500"
+    case "환경·소음":
+      return "bg-yellow-500"
     default:
-      return "bg-gray-500 text-white";
+      return "bg-gray-500"
   }
-};
+}
 
 interface RealtimeComplaintsProps {
-  onComplaintClick: (complaint: Complaint) => void
+  onComplaintClick: (complaint: ComplaintItem) => void
 }
 
 export function RealtimeComplaints({ onComplaintClick }: RealtimeComplaintsProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [complaints, setComplaints] = useState<ComplaintItem[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const realtimeComplaints = sampleComplaints.slice(0, 10)
+  useEffect(() => {
+    const fetchComplaints = async () => {
+      try {
+        const data = await loadComplaintsData()
+        setComplaints(data)
+      } catch (error) {
+        console.error('Error fetching complaints:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchComplaints()
+  }, [])
+
+  const realtimeComplaints = complaints.slice(0, 10)
 
   const nextComplaint = () => {
+    if (realtimeComplaints.length === 0) return
     setCurrentIndex((prev) => (prev + 1) % realtimeComplaints.length)
   }
 
   const prevComplaint = () => {
+    if (realtimeComplaints.length === 0) return
     setCurrentIndex((prev) => (prev - 1 + realtimeComplaints.length) % realtimeComplaints.length)
   }
 
-  const handleComplaintClick = (complaint: Complaint) => {
+  const handleComplaintClick = (complaint: ComplaintItem) => {
     onComplaintClick(complaint)
+  }
+
+  if (loading || realtimeComplaints.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-16">
+        <div className="text-sm text-gray-500">민원 데이터를 불러오는 중...</div>
+      </div>
+    )
   }
 
   const currentComplaint = realtimeComplaints[currentIndex]
@@ -61,8 +102,8 @@ export function RealtimeComplaints({ onComplaintClick }: RealtimeComplaintsProps
             style={{ color: "#B22B78" }}
           >
             <span className="text-lg font-semibold">{currentComplaint.title}</span>
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(currentComplaint.status)}`}>
-              {currentComplaint.status}
+            <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getTypeColor(currentComplaint.type as ComplaintType)}`}>
+              {currentComplaint.type}
             </span>
             <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
           </button>

@@ -12,6 +12,14 @@ export interface ComplaintData {
     분야: string
     건수: string
   }
+
+  export interface ComplaintItem {
+    id: number
+    title: string
+    registeredAt: string
+    content: string
+    type: string
+  }
   
   // CSV 텍스트를 파싱하는 함수
   function parseCSV(csvText: string): RawComplaintData[] {
@@ -38,10 +46,96 @@ export interface ComplaintData {
     return data
   }
   
+  // 민원 CSV 텍스트를 파싱하는 함수
+  function parseComplaintsCSV(csvText: string): ComplaintItem[] {
+    const lines = csvText.trim().split('\n')
+    const data: ComplaintItem[] = []
+    
+    // 첫 번째 행은 헤더이므로 건너뛰고 두 번째 행부터 파싱
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i]
+      if (line.trim()) {
+        // CSV 파싱 (쉼표로 구분, 따옴표 처리)
+        const values = parseCSVLine(line)
+        if (values.length >= 4) {
+          data.push({
+            id: i, // 인덱스를 ID로 사용
+            title: values[0],
+            registeredAt: values[1],
+            content: values[2],
+            type: values[3]
+          })
+        }
+      }
+    }
+    
+    return data
+  }
+
+  // CSV 라인을 파싱하는 함수 (따옴표 처리)
+  function parseCSVLine(line: string): string[] {
+    const result: string[] = []
+    let current = ''
+    let inQuotes = false
+    let i = 0
+    
+    while (i < line.length) {
+      const char = line[i]
+      
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          // 이스케이프된 따옴표
+          current += '"'
+          i += 2
+        } else {
+          // 따옴표 시작/끝
+          inQuotes = !inQuotes
+          i++
+        }
+      } else if (char === ',' && !inQuotes) {
+        // 필드 구분자
+        result.push(current.trim())
+        current = ''
+        i++
+      } else {
+        // 일반 문자
+        current += char
+        i++
+      }
+    }
+    
+    // 마지막 필드 추가
+    result.push(current.trim())
+    
+    return result
+  }
+  
   // 증감률 계산 함수
   function calculateChange(current: number, previous: number): number {
     if (previous === 0) return 0
     return ((current - previous) / previous) * 100
+  }
+
+  // 민원 데이터 로드 함수
+  export async function loadComplaintsData(): Promise<ComplaintItem[]> {
+    try {
+      const filePath = '/data/complaints/traffic_issues_final_corrected.csv'
+      
+      // CSV 파일 로드
+      const response = await fetch(filePath)
+      if (!response.ok) {
+        throw new Error(`Failed to load CSV file: ${response.statusText}`)
+      }
+      
+      const csvText = await response.text()
+      const complaintsData = parseComplaintsCSV(csvText)
+      
+      return complaintsData
+    } catch (error) {
+      console.error('Error loading complaints data:', error)
+      // 에러 시 기본 데이터 반환
+      return []
+    }
   }
   
   // CSV 파일에서 데이터 로드 및 처리
@@ -69,11 +163,11 @@ export interface ComplaintData {
         'road': '도로'
       }
       
-      const filteredData = rawData.filter(item => item.분야 === categoryMap[category])
+      const filteredData = rawData.filter((item: RawComplaintData) => item.분야 === categoryMap[category])
       
       // 날짜별로 그룹화하고 건수 합계 계산
       const groupedData = new Map<string, number>()
-      filteredData.forEach(item => {
+      filteredData.forEach((item: RawComplaintData) => {
         const date = item.일자
         const count = parseInt(item.건수) || 0
         groupedData.set(date, (groupedData.get(date) || 0) + count)
